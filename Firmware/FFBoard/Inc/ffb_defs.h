@@ -201,12 +201,16 @@ typedef struct
  */
 typedef struct
 {
-	float spline_x[4] = {0}; 		// Tampon de temps (en us)
-	float spline_y[4] = {0}; 		// Tampon de valeurs
-	float spline_y2[4] = {0};    	// Tampon de travail pour Spline Naturel
-	float spline_scratch[4] = {0}; 	// Tampon de travail pour Spline Naturel
 #ifdef USE_DSP_FUNCTIONS
+	float32_t spline_x[4] = {0}; 		// Buffer time(en us)
+	float32_t spline_y[4] = {0}; 		// Buffer value
+	float32_t spline_y2[4] = {0};    	// Buffer for Spline Natural
+	float32_t spline_scratch[8] = {0}; 	// Buffer for Spline Natural
 	arm_spline_instance_f32 spline_instance; // Instance pour CMSIS-DSP
+	bool spline_arm_initialized = false;	 // CMSIS-DSP initialized ?
+#else
+	float spline_x[4] = {0}; 		// Buffer time(en us)
+	float spline_y[4] = {0}; 		// Buffer value
 #endif
 	bool isSplineReady = false;	// Le tampon est-il plein ?
 } ReconFilterState;
