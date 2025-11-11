@@ -30,7 +30,6 @@
 #include "RmdMotorCAN.h"
 #endif
 
-
 //////////////////////////////////////////////
 /*
  * Sources for class choosers are defined in MotorDriver and Encoder
