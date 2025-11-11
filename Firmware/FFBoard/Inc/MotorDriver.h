@@ -27,6 +27,7 @@ public:
 	const ClassType getClassType() override {return ClassType::Motordriver;};
 	static const std::vector<class_entry<MotorDriver>> all_drivers;
 
+	virtual void setupDriver();
 	virtual void turn(int16_t power);
 	virtual void stopMotor();
 	virtual void startMotor();

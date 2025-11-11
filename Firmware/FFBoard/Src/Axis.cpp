@@ -430,7 +430,7 @@ void Axis::setDrvType(uint8_t drvtype)
 		return;
 	}
 	cpp_freertos::CriticalSection::Enter();
-	this->drv.reset(drv_chooser.Create((uint16_t)drvtype));
+	this->drv.reset(driverChooser.Create((uint16_t)drvtype));
 	if (drv == nullptr)
 	{
 		cpp_freertos::CriticalSection::Exit();
@@ -443,6 +443,9 @@ void Axis::setDrvType(uint8_t drvtype)
 	if(!this->drv->hasIntegratedEncoder()){
 		this->drv->setEncoder(this->enc);
 	}
+
+	drv->setupDriver();
+	
 	if (!tud_connected())
 	{
 		control->usb_disabled = false;

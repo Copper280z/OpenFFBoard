@@ -424,6 +424,7 @@ public:
 
 	TMC4671MainConfig conf;
 
+	void setupDriver();
 	bool initialize();
 	void initializeWithPower();
 
@@ -503,6 +504,7 @@ public:
 	bool emergency = false;
 	bool estopTriggered = false;
 	void turn(int16_t power);
+
 	int16_t getVelocityControllerTorque();
 	int16_t nextFlux = 0;
 	int16_t idleFlux = 0;

@@ -240,6 +240,18 @@ int32_t TMC4671::getTmcVM(){
 	return ((float)agpiA_VM * conf.hwconf.vmScaler) * 1000;
 }
 
+void TMC4671::setupDriver() {
+	// Configuration specific to TMC4671 upon starting the motor
+	// The power limit is set by the Axis class via setPowerLimit during initialization.
+
+	this->setExternalEncoderAllowed(true);
+	this->restoreFlash();
+	this->setLimits(curLimits);
+
+	// Start driver
+	this->setMotionMode(MotionMode::torque);
+	this->Start(); // Start thread
+}
 
 /**
  * Sets all parameters of the driver at startup. Only has to be called once when the driver is detected
@@ -1675,13 +1687,6 @@ void TMC4671::startMotor(){
 	}
 	// Start driver if powered and emergency flag reset
 	if(hasPower() && !emergency){
-		// Configuration specific to TMC4671 upon starting the motor
-		// The power limit is set by the Axis class via setPowerLimit during initialization.
-		// We call setLimits() here to ensure all other limits (velocity, acceleration, etc.) are applied from the defaults.
-		setExternalEncoderAllowed(true);
-		setLimits(curLimits);
-		setMotionMode(MotionMode::torque);
-		
 		setPwm(TMC_PwmMode::PWM_FOC); // enable foc
 		enablePin.set();
 		setMotionMode(nextMotionMode,true);
