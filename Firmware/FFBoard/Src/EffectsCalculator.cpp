@@ -120,68 +120,61 @@ float EffectsCalculator::getReconstructedvalue(ReconFilterState* state, float fa
 
         case ReconFilterMode::LINEAR_INTERPOLATION:
         {
-            float t0 = state->spline_x[2]; // Pénultième point
-            float t1 = state->spline_x[3]; // Dernier point
-            float v0 = state->spline_y[2];
-            float v1 = state->spline_y[3];
+			// "Safe" Linear Interpolation (Delayed by 1 sample)
+			// To absolutely guarantee NO OVERSHOOT, we must not extrapolate.
+			// We accept a strictly defined transport delay of 1 sample.
+			//
+			// Logic: We are currently at time 'now_us', which is AFTER the latest update 't1'.
+			// We don't know the future, so we replay the ramp from V0 to V1, but we start it NOW.
+			// We use the previous interval duration (t1 - t0) as our best guess for when the
+			// NEXT packet (t2) will arrive, ensuring we reach V1 exactly when t2 is expected.
 
-            float interval_duration = t1 - t0;
-            if (interval_duration <= 0) {
-                resulting_value = v1;
-                break;
-            }
+			float t0 = state->spline_x[2]; // Time of penultimate sample (T-1)
+			float t1 = state->spline_x[3]; // Time of latest sample (T)
+			float v0 = state->spline_y[2]; // Value of penultimate sample (V0)
+			float v1 = state->spline_y[3]; // Value of latest sample (V1)
 
-            // On interpole *entre* t0 et t1 (pas t1 et "now")
-            // Correction : on interpole entre t0 et t1, en projetant "now"
-            // MAIS pour la latence la plus faible, on interpole entre t1 et "now",
-            // en utilisant l'intervalle t0-t1 comme durée.
-            // NON, la logique LERP simple est entre T-1 et T
-            float progress = ((float)now_us - t1) / (t1 - t0); // Progrès depuis T
-            progress = clip<float>(progress, 0.0f, 1.0f); // Évite l'extrapolation
-            resulting_value = v0 + progress * (v1 - v0); // Erreur: v0 +...
+			// Estimate the expected duration until the next packet arrives.
+			float expected_interval = t1 - t0;
 
-            // Correction de la logique Linear:
-            // Nous voulons interpoler entre le point [2] et le point [3]
-            // "now_us" doit se situer entre spline_x[2] et spline_x[3]
+			// Sanity check: avoid division by zero if updates are too fast (e.g. double-send bugs)
+			if (expected_interval < 1.0f) {
+				resulting_value = v1;
+				break;
+			}
 
-            float progress_lin = ((float)now_us - t0) / interval_duration;
-            progress_lin = clip<float>(progress_lin, 0.0f, 1.0f);
-            resulting_value = v0 + progress_lin * (v1 - v0);
+			// Calculate progress based on time elapsed SINCE t1.
+			float time_since_t1 = (float)(now_us - t1);
+			float progress = time_since_t1 / expected_interval;
 
-            // *** RE-CORRECTION ***
-            // Votre code original (ligne 201) interpole entre t0 et t1, mais
-            // utilise 'now_us - t1_us'. C'est confus.
-            // La VRAIE interpolation linéaire (LRF) se fait entre T-1 et T
-            // (points 2 et 3) sur la *durée* qui les sépare.
-            float t_lin_0 = state->spline_x[2];
-            float t_lin_1 = state->spline_x[3];
-            float v_lin_0 = state->spline_y[2];
-            float v_lin_1 = state->spline_y[3];
+			// Clamp progress to [0.0, 1.0] to eliminate ANY overshoot.
+			progress = clip<float>(progress, 0.0f, 1.0f);
 
-            float lin_duration = t_lin_1 - t_lin_0;
-            if(lin_duration <= 0) {
-                resulting_value = v_lin_1;
-                break;
-            }
-            float lin_progress = ((float)now_us - t_lin_1) / lin_duration;
-            // ^^^ ERREUR. "now" doit être entre t0 et t1.
-            // La logique correcte est :
-            lin_progress = ((float)now_us - t_lin_0) / lin_duration;
-            lin_progress = clip<float>(lin_progress, 0.0f, 1.0f);
-            resulting_value = v_lin_0 + lin_progress * (v_lin_1 - v_lin_0);
-
-            break;
+			// Interpolate between the two KNOWN, SAFE past values.
+			resulting_value = v0 + progress * (v1 - v0);
+			break;
         }
 
 #ifdef USE_DSP_FUNCTIONS
         // if DSP is enabled we have SPLINE available, else use Hermite
         case ReconFilterMode::SPLINE_CUBIC_NATURAL:
         {
-            float interpolated_torque_f = 0.0f;
-            float now_f = (float)now_us;
+        	//	 If spline is not ready, return last known value
+			if (!state->spline_arm_initialized) {
+				 resulting_value = state->spline_y[3];
+				 break;
+			}
 
-            float interp_time = clip<float>(now_f, state->spline_x[0], state->spline_x[3]);
+			float32_t interpolated_torque_f = 0.0f;
+			float32_t now_f = (float)now_us;
+
+			// Clamp time to known range to avoid extrapolation
+            float32_t interp_time = clip<float32_t>(now_f, state->spline_x[0], state->spline_x[3]);
+
+			// Perform the spline interpolation using CMSIS-DSP
             arm_spline_f32(&state->spline_instance, &interp_time, &interpolated_torque_f, 1);
+
+			// Return the interpolated value
             resulting_value = interpolated_torque_f;
             break;
         }
@@ -193,31 +186,35 @@ float EffectsCalculator::getReconstructedvalue(ReconFilterState* state, float fa
         case ReconFilterMode::SPLINE_CUBIC_NATURAL:
 #endif
         {
-            // L'interpolation se fait entre P1 (idx 1) et P2 (idx 2)
+            // Interpolation hermit is made betwwen P1 (idx 1) and P2 (idx 2)
             const float p1 = state->spline_y[1];
             const float p2 = state->spline_y[2];
             const float t1 = state->spline_x[1];
             const float t2 = state->spline_x[2];
 
+			// sanity check to not divide by zero and clamp for not overshoot
             float interval = t2 - t1;
             if (interval <= 0) {
                 resulting_value = p1;
                 break;
             }
             float t = ((float)now_us - t1) / interval;
-            t = clip<float>(t, 0.0f, 1.0f); // Pas d'extrapolation
+            t = clip<float>(t, 0.0f, 1.0f);
 
             // Tangentes (Catmull-Rom)
             float m1, m2;
             float dt_m1 = state->spline_x[2] - state->spline_x[0];
             float dt_m2 = state->spline_x[3] - state->spline_x[1];
 
+			// Compute tangents safely
             if (dt_m1 > 0) m1 = (state->spline_y[2] - state->spline_y[0]) / dt_m1; else m1 = 0;
             if (dt_m2 > 0) m2 = (state->spline_y[3] - state->spline_y[1]) / dt_m2; else m2 = 0;
 
+			// Scale tangents by interval
             m1 *= interval;
             m2 *= interval;
 
+			// Hermite basis functions
             float tSq = t * t;
             float tCub = tSq * t;
             float h_00 = 2*tCub - 3*tSq + 1;
@@ -225,6 +222,7 @@ float EffectsCalculator::getReconstructedvalue(ReconFilterState* state, float fa
             float h_01 = -2*tCub + 3*tSq;
             float h_11 = tCub - tSq;
 
+			// Final interpolation
             resulting_value = h_00 * p1 + h_10 * m1 + h_01 * p2 + h_11 * m2;
             break;
         }
@@ -299,18 +297,28 @@ void EffectsCalculator::calculateEffects(std::vector<std::unique_ptr<Axis>> &axe
  * Periodic and constant effects
  */
 int32_t EffectsCalculator::calcNonConditionEffectForce(FFB_Effect *effect) {
+
+	// Sanity check effect type must be non-conditional
+	// Avoid calculating reconstructed forces for conditional effects here
+	if (effect->type == FFB_EFFECT_SPRING ||
+		effect->type == FFB_EFFECT_DAMPER ||
+		effect->type == FFB_EFFECT_FRICTION ||
+		effect->type == FFB_EFFECT_INERTIA) {
+		return 0;
+	}
+
 	int32_t force_vector = 0;
 	
 	// Get interpolated magnitude (or amplitude)
 	float interpolated_magnitude = getReconstructedvalue(
-        &effect->recon_magnitude,    // Utilise la nouvelle structure
-        (float)effect->magnitude     // Valeur de fallback (pour le mode NONE)
+        &effect->recon_magnitude,    // Use the new structure
+        (float)effect->magnitude     // Fallback value (for NONE mode)
     );
 
     // Get interpolated offset
     float interpolated_offset_float = getReconstructedvalue(
-        &effect->recon_offset,       // Utilise la nouvelle structure
-        (float)effect->offset
+        &effect->recon_offset,       // Use the new structure
+        (float)effect->offset		 // Fallback value (for NONE mode)
     );
     int32_t offset_lrf = (int32_t)interpolated_offset_float;
 
@@ -712,6 +720,9 @@ void EffectsCalculator::pushReconParam(ReconFilterState* state, float newValue)
             state->spline_y2,
             state->spline_scratch
         );
+
+		state->spline_arm_initialized = true;
+		
 #endif
     }
 }
