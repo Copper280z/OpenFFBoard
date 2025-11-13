@@ -147,9 +147,9 @@ Axis::Axis(char axis,volatile Control_t* control) :CommandHandler("axis", CLSID_
 	}
 
 	// Initialize equalizer filters
-	/*for (uint8_t idx = 0; idx < num_eq_bands; idx++) {
+	for (uint8_t idx = 0; idx < num_eq_bands; idx++) {
 		eqFilters[idx].setBiquad(BiquadType::peak, eq_frequencies[idx] / filter_f, 1.0, 0.0);
-	}*/
+	}
 
 	CommandHandler::registerCommands(); // Internal commands
 	registerCommands();
@@ -197,19 +197,19 @@ void Axis::registerCommands(){
 	registerCommand("exposcale", Axis_commands::exposcale, "Scaler constant for expo", CMDFLAG_GET);
 
 	registerCommand("equalizer", Axis_commands::equalizer, "Equalizer enable", CMDFLAG_GET | CMDFLAG_SET);
-	registerCommand("eqb1", Axis_commands::eqb1, "Equalizer band 1 gain (-120 to 120)", CMDFLAG_GET | CMDFLAG_SET);
-	registerCommand("eqb2", Axis_commands::eqb2, "Equalizer band 2 gain (-120 to 120)", CMDFLAG_GET | CMDFLAG_SET);
-	registerCommand("eqb3", Axis_commands::eqb3, "Equalizer band 3 gain (-120 to 120)", CMDFLAG_GET | CMDFLAG_SET);
-	registerCommand("eqb4", Axis_commands::eqb4, "Equalizer band 4 gain (-120 to 120)", CMDFLAG_GET | CMDFLAG_SET);
-	registerCommand("eqb5", Axis_commands::eqb5, "Equalizer band 5 gain (-120 to 120)", CMDFLAG_GET | CMDFLAG_SET);
-	registerCommand("eqb6", Axis_commands::eqb6, "Equalizer band 6 gain (-120 to 120)", CMDFLAG_GET | CMDFLAG_SET);
+	registerCommand("eqb1", Axis_commands::eqb1, "Equalizer band 1 gain (-120/120)", CMDFLAG_GET | CMDFLAG_SET);
+	registerCommand("eqb2", Axis_commands::eqb2, "Eq bd 2", CMDFLAG_GET | CMDFLAG_SET);
+	registerCommand("eqb3", Axis_commands::eqb3, "Eq bd 3", CMDFLAG_GET | CMDFLAG_SET);
+	registerCommand("eqb4", Axis_commands::eqb4, "Eq bd 4", CMDFLAG_GET | CMDFLAG_SET);
+	registerCommand("eqb5", Axis_commands::eqb5, "Eq bd 5", CMDFLAG_GET | CMDFLAG_SET);
+	registerCommand("eqb6", Axis_commands::eqb6, "Eq bd 6", CMDFLAG_GET | CMDFLAG_SET);
 
-	registerCommand("handsoff", Axis_commands::handsoff, "Hands-off detection enable", CMDFLAG_GET | CMDFLAG_SET);
-	registerCommand("handsoff_speed", Axis_commands::handsoff_speed, "Hands-off detection speed threshold (deg/s)", CMDFLAG_GET | CMDFLAG_SET);
-	registerCommand("handsoff_accel", Axis_commands::handsoff_accel, "Hands-off detection accel std dev threshold (float, val/1000)", CMDFLAG_GET | CMDFLAG_SET);
+	registerCommand("handsoff", Axis_commands::handsoff, "Hands-off enable", CMDFLAG_GET | CMDFLAG_SET);
+	registerCommand("handsoff_speed", Axis_commands::handsoff_speed, "Hoff speed thrld (deg/s)", CMDFLAG_GET | CMDFLAG_SET);
+	registerCommand("handsoff_accel", Axis_commands::handsoff_accel, "Hoff accel std dev thrld (float, val/1000)", CMDFLAG_GET | CMDFLAG_SET);
 
-	registerCommand("maxSlewRateDrv", Axis_commands::maxSlewRateDrv, "Max driver torque rate limit in counts/ms",CMDFLAG_GET);
-	registerCommand("calibrate_maxSlewRateDrv", Axis_commands::calibrate_maxSlewRateDrv, "Start driver slew rate calibration", CMDFLAG_GET);
+	registerCommand("maxSlewRateDrv", Axis_commands::maxSlewRateDrv, "Max driver torque in counts/ms",CMDFLAG_GET);
+	registerCommand("calibrate_maxSlewRateDrv", Axis_commands::calibrate_maxSlewRateDrv, "Start driver slewRate calib", CMDFLAG_GET);
 }
 
 /*
