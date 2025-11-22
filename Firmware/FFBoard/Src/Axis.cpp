@@ -769,6 +769,32 @@ void Axis::updateMetrics(float new_pos) { // pos is degrees
 	// Update hands-off detection buffer
 	accel_buffer[accel_buffer_idx] = metric.current.accel;
 	accel_buffer_idx = (accel_buffer_idx + 1) % (sizeof(accel_buffer) / sizeof(accel_buffer[0]));
+	// compute speed and accel from time between enocder changes
+	const float pos_change = new_pos - metric.previous.posDegrees;
+	timeSincePosChange += 1;
+	const float tick_rate = 1000.0f;
+	const uint16_t update_timeout = 1000; // 1 second
+	const float update_time_inv = (tick_rate/timeSincePosChange);
+	if ((fabsf(pos_change) > 1e-8f)) {
+		const float currentSpeed = pos_change * update_time_inv; // deg/s
+		metric.current.speed = speedFilter.process(currentSpeed);
+		metric.current.accel = accelFilter.process((currentSpeed - _lastSpeed) * tick_rate); // deg/s/s
+		_lastSpeed = currentSpeed;
+		timeSincePosChange = 0;
+	} else if (timeSincePosChange >= update_timeout) {
+		metric.current.speed = speedFilter.process(0.0f);
+		metric.current.accel = accelFilter.process(0.0f);
+	} else {
+		const float speed_dir = copysign(1.0f,metric.previous.speed);
+		// Encoder* enc = getEncoder();
+		const uint32_t cpr = 10000;//enc->getCpr();
+		const float angle_inc = 360.0f / cpr; // deg
+		const float speed_bound = angle_inc/update_time_inv; // deg/sec
+		const float speed_est = speed_dir * std::min(fabsf(metric.previous.speed), speed_bound); // deg/sec
+		metric.current.speed = speedFilter.process(speed_est);
+		metric.current.accel = accelFilter.process((speed_est - _lastSpeed) * tick_rate); // deg/s/s
+		_lastSpeed = speed_est;
+	}
 }
 
 
