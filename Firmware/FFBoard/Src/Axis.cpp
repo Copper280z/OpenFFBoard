@@ -760,15 +760,7 @@ void Axis::updateMetrics(float new_pos) { // pos is degrees
 	std::tie(metric.current.pos_scaled_16b,metric.current.pos_f) = scaleEncValue(new_pos, degreesOfRotation);
 
 
-	// compute speed and accel from raw instant speed normalized
-	float currentSpeed = (new_pos - metric.previous.posDegrees) * this->filter_f; // deg/s
-	metric.current.speed = speedFilter.process(currentSpeed);
-	metric.current.accel = accelFilter.process((currentSpeed - previousFrameSpeed))* this->filter_f; // deg/s/s
-	previousFrameSpeed = currentSpeed;
 
-	// Update hands-off detection buffer
-	accel_buffer[accel_buffer_idx] = metric.current.accel;
-	accel_buffer_idx = (accel_buffer_idx + 1) % (sizeof(accel_buffer) / sizeof(accel_buffer[0]));
 	// compute speed and accel from time between enocder changes
 	const float pos_change = new_pos - metric.previous.posDegrees;
 	timeSincePosChange += 1;
@@ -795,6 +787,9 @@ void Axis::updateMetrics(float new_pos) { // pos is degrees
 		metric.current.accel = accelFilter.process((speed_est - _lastSpeed) * tick_rate); // deg/s/s
 		_lastSpeed = speed_est;
 	}
+	// Update hands-off detection buffer
+	accel_buffer[accel_buffer_idx] = metric.current.accel;
+	accel_buffer_idx = (accel_buffer_idx + 1) % (sizeof(accel_buffer) / sizeof(accel_buffer[0]));
 }
 
 

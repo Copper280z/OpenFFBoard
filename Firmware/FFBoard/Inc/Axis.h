@@ -3,7 +3,7 @@
  *
  *  Created on: 21.01.2021
  *      Author: Yannick / Lidders / Vincent
- * 
+ *
  *  Release 27.10.25: Vincent, add reconstruction filter, equalizer, slew rate.
  */
 
@@ -563,6 +563,9 @@ private:
 	float accel_buffer[16] = {0};
 	uint8_t accel_buffer_idx = 0;
 	uint32_t handsOffTimer = 0;
+
+	uint16_t timeSincePosChange = 0;
+	float _lastSpeed = 0;
 };
 
 #endif /* SRC_AXIS_H_ */
