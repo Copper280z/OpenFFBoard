@@ -82,7 +82,7 @@ endif
 
 
 # AS includes
-AS_INCLUDES = 
+AS_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
@@ -101,8 +101,9 @@ $(TARGET_DIR)/Drivers/STM32F4xx_HAL_Driver/Inc/Legacy \
 $(TARGET_DIR)/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
 $(TARGET_DIR)/Middlewares/Third_Party/FreeRTOS/Source/include \
 $(TARGET_DIR)/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F \
+$(TARGET_DIR)/Middlewares/ST/ARM/DSP/Inc \
 $(TARGET_DIR)/Drivers/CMSIS/Device/ST/STM32F4xx/Include \
-$(TARGET_DIR)/Drivers/CMSIS/Include 
+$(TARGET_DIR)/Drivers/CMSIS/Include
 
 
 C_INCLUDES := $(addprefix -I, $(C_INCLUDES))
@@ -146,12 +147,12 @@ MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
 
 # macros for gcc
 # AS defines
-AS_DEFS = 
+AS_DEFS =
 
 # C defines
 C_DEFS =  \
 -DSTM32_THREAD_SAFE_STRATEGY=4 \
--DUSE_HAL_DRIVER 
+-DUSE_HAL_DRIVER
 ifeq ($(MCU_TARGET),F411RE)
 C_DEFS += -DSTM32F411xE
 else
@@ -184,10 +185,12 @@ LDSCRIPT = $(TARGET_DIR)/STM32$(MCU_TARGET)TX_FLASH.ld
 endif
 
 # libraries
-LIBS = -lc -lm -lnosys 
-LIBDIR = 
+LIBS = -lc -lm -lnosys
+LIBDIR =
 LDFLAGS = $(MCU) --specs=standard_c_nano_cpp.specs -u _printf_float -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIR)/$(TARGET).map,--cref -Wl,--gc-sections -static
 # -mcpu=cortex-m4 -T"C:\Users\zhouli\Desktop\my-openffb\OpenFFBoard\Firmware\Targets\F407VG\STM32F407VGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="OpenFFBoard_F407VG.map" -Wl,--cref -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -u _printf_float -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+LDFLAGS += -L$(TARGET_DIR)/Middlewares/ST/ARM/DSP/Lib
+LDFLAGS += -l:libarm_cortexM4lf_math.a
 
 # default action: build all
 all: $(BUILD_DIR)/$(TARGET).elf $(OUTPUT_DIR)/$(TARGET).hex $(OUTPUT_DIR)/$(TARGET).bin
@@ -214,10 +217,10 @@ OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
 
 
-$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR) 
+$(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
-$(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR) 
+$(BUILD_DIR)/%.o: %.cpp Makefile | $(BUILD_DIR)
 	$(CXX) -c $(CXXFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.cpp=.lst)) $< -o $@
 
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
