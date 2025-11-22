@@ -6,6 +6,9 @@
 .metadata
 .mxproject
 fixlang
-/build/
-/OpenFFBoard/
+**/build/
+**/OpenFFBoard/
 .DS_Store
+.cache/
+**/.cache/
+compile_commands.json
