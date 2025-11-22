@@ -3,7 +3,7 @@
  *
  *  Created on: 31.01.2020
  *      Author: Yannick, Vincent
- * 		
+ *
  */
 
 #include "Axis.h"
@@ -458,12 +458,12 @@ void Axis::prepareForUpdate(){
 				this->maxTorqueRateMS = this->maxSlewRate_Driver;
 				CommandHandler::broadcastCommandReply(CommandReply(this->maxTorqueRateMS), (uint32_t)Axis_commands::slewrate, CMDtype::get);
 			}
-			
+
 			// Broadcast a friendly completion message and the numeric value
 			CommandHandler::broadcastCommandReply(CommandReply("Slew rate calibration complete",0), (uint32_t)Axis_commands::calibrate_maxSlewRateDrv, CMDtype::get);
 			CommandHandler::broadcastCommandReply(CommandReply(this->maxSlewRate_Driver), (uint32_t)Axis_commands::maxSlewRateDrv, CMDtype::get);
 
-			
+
 			this->awaitingSlewCalibration = false;
 		}
 	}
@@ -528,7 +528,7 @@ void Axis::setDrvType(uint8_t drvtype)
 	}
 
 	drv->setupDriver();
-	
+
 	if (!tud_connected())
 	{
 		control->usb_disabled = false;
@@ -769,12 +769,13 @@ void Axis::updateMetrics(float new_pos) { // pos is degrees
 	const float update_time_inv = (tick_rate/timeSincePosChange);
 	if ((fabsf(pos_change) > 1e-8f)) {
 		const float currentSpeed = pos_change * update_time_inv; // deg/s
-		metric.current.speed = speedFilter.process(currentSpeed);
+		// metric.current.speed = speedFilter.process(currentSpeed);
+		metric.current.speed = currentSpeed;
 		metric.current.accel = accelFilter.process((currentSpeed - _lastSpeed) * tick_rate); // deg/s/s
 		_lastSpeed = currentSpeed;
 		timeSincePosChange = 0;
 	} else if (timeSincePosChange >= update_timeout) {
-		metric.current.speed = speedFilter.process(0.0f);
+		metric.current.speed = 0.0f;
 		metric.current.accel = accelFilter.process(0.0f);
 	} else {
 		const float speed_dir = copysign(1.0f,metric.previous.speed);
@@ -783,7 +784,7 @@ void Axis::updateMetrics(float new_pos) { // pos is degrees
 		const float angle_inc = 360.0f / cpr; // deg
 		const float speed_bound = angle_inc/update_time_inv; // deg/sec
 		const float speed_est = speed_dir * std::min(fabsf(metric.previous.speed), speed_bound); // deg/sec
-		metric.current.speed = speedFilter.process(speed_est);
+		metric.current.speed = speed_est;
 		metric.current.accel = accelFilter.process((speed_est - _lastSpeed) * tick_rate); // deg/s/s
 		_lastSpeed = speed_est;
 	}
@@ -817,14 +818,14 @@ int64_t Axis::calculateFFBTorque(){
 
 	// Compute Expo
 	if(expo != 1){
-		
+
 		if(torque < 0){
 			torque = -powf(-torque,expo);
 		} else {
 			torque = powf(torque,expo);
 		}
 	}
-	
+
 	// Compute scaler
 	torque *= effectRatioScaler;
 
@@ -872,7 +873,7 @@ bool Axis::updateTorque(int32_t* totalTorque) {
 
 	// Step 3: Apply safety and comfort limiters
 	torque -= applySpeedLimiterTorque(torque);	// apply speedLimiter
-	applyTorqueSlewRateLimiter(torque);		// Torque Slew Rate Limiter: 
+	applyTorqueSlewRateLimiter(torque);		// Torque Slew Rate Limiter:
 
 	// Cut torque if the encoder is out of bounds (safety) or hands are off.
 	//if(outOfBounds || handsOff){
@@ -897,7 +898,7 @@ bool Axis::updateTorque(int32_t* totalTorque) {
 	}
 
 	// Store the actually applied torque for the next iteration (used by the slew rate limiter).
-	metric.current.torque = torqueAfterClipping; 
+	metric.current.torque = torqueAfterClipping;
 
 	// return result
 	*totalTorque = torqueAfterClipping;
@@ -1044,7 +1045,7 @@ CommandStatus Axis::command(const ParsedCommand& cmd,std::vector<CommandReply>& 
 		break;
 
 	case Axis_commands::degrees:
-		handleGetSetFunc(cmd, replies, degreesOfRotation, &Axis::setDegrees,this); 
+		handleGetSetFunc(cmd, replies, degreesOfRotation, &Axis::setDegrees,this);
 		break;
 
 	case Axis_commands::esgain:
@@ -1301,7 +1302,7 @@ CommandStatus Axis::command(const ParsedCommand& cmd,std::vector<CommandReply>& 
 	case Axis_commands::handsoff:
 		handleGetSet(cmd, replies, this->handsOffCheckEnabled);
 		break;
-	
+
 	case Axis_commands::handsoff_speed:
 		handleGetSet(cmd, replies, this->handsOffSpeedThreshold);
 		break;
